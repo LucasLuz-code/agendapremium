@@ -1,6 +1,7 @@
 /**
  * AGENDA ESTUDANTIL PRO - CORE SCRIPT
  * Lógica de gerenciamento de estado, integração Supabase e UI dinâmico.
+ * ATUALIZADO: Sistema de Status, Modal de Conclusão e Ordenação por Data
  */
 
 // --- CONFIGURAÇÃO SUPABASE ---
@@ -13,7 +14,9 @@ let state = {
     tasks: [],
     filter: 'Todos',
     search: '',
-    isDarkMode: false
+    isDarkMode: false,
+    taskToComplete: null, // Armazena ID da tarefa sendo completada
+    previousStatus: null // Armazena status anterior da tarefa
 };
 
 // --- ELEMENTOS DO DOM ---
@@ -23,13 +26,16 @@ const dom = {
     countPending: document.getElementById('count-pending'),
     countCompleted: document.getElementById('count-completed'),
     modalForm: document.getElementById('modal-form'),
+    modalComplete: document.getElementById('modal-complete'),
     modalDetails: document.getElementById('modal-details'),
     taskForm: document.getElementById('task-form'),
     tccFields: document.getElementById('tcc-fields'),
     searchInput: document.getElementById('search-input'),
     themeToggle: document.getElementById('theme-toggle'),
     loader: document.getElementById('loader'),
-    navItems: document.querySelectorAll('.nav-item')
+    navItems: document.querySelectorAll('.nav-item'),
+    completedByInput: document.getElementById('completed-by'),
+    btnConfirmComplete: document.getElementById('btn-confirm-complete')
 };
 
 // --- INICIALIZAÇÃO ---
@@ -53,14 +59,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- FUNÇÕES DE DADOS (SUPABASE) ---
 
 /**
- * Busca todas as tarefas do banco de dados
+ * Busca todas as tarefas do banco de dados e ordena por data
  */
 async function fetchTasks() {
     try {
         const { data, error } = await supabaseClient
             .from('tarefas')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('date', { ascending: true, nullsFirst: false });
 
         if (error) throw error;
         state.tasks = data || [];
@@ -77,14 +83,27 @@ async function handleSaveTask(e) {
     e.preventDefault();
     
     const id = document.getElementById('task-id').value;
+    const status = document.getElementById('f-status').value;
+    
     const taskData = {
         description: document.getElementById('f-description').value,
         date: document.getElementById('f-date').value || null,
         priority: document.getElementById('f-priority').value,
         category: document.getElementById('f-category').value,
         details: document.getElementById('f-details').value,
-        completed: false
+        status: status,
+        completed: status === 'pronto',
+        completed_by: status === 'pronto' ? (document.getElementById('f-completed-by')?.value || null) : null
     };
+
+    // Se mudou para "pronto" e não tem completed_by, abre modal de confirmação
+    if (status === 'pronto' && !id) {
+        // Salva temporariamente e depois abre modal
+        state.pendingTaskData = taskData;
+        closeModals();
+        openCompleteModal(null, taskData);
+        return;
+    }
 
     try {
         let response;
@@ -130,13 +149,29 @@ async function deleteTask(id) {
 }
 
 /**
- * Alterna status de conclusão
+ * Altera o status da tarefa
  */
-async function toggleComplete(id, currentStatus) {
+async function changeStatus(id, newStatus) {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
+
+    // Se mudou para "pronto", abre modal para pedir nome
+    if (newStatus === 'pronto') {
+        // Guarda o status anterior para poder reverter
+        state.previousStatus = task.status || 'ninguem-fazendo';
+        openCompleteModal(id);
+        return;
+    }
+
+    // Para outros status, apenas atualiza
     try {
         const { error } = await supabaseClient
             .from('tarefas')
-            .update({ completed: !currentStatus })
+            .update({ 
+                status: newStatus,
+                completed: false,
+                completed_by: null
+            })
             .eq('id', id);
 
         if (error) throw error;
@@ -146,17 +181,116 @@ async function toggleComplete(id, currentStatus) {
     }
 }
 
+/**
+ * Abre modal de confirmação de conclusão
+ */
+function openCompleteModal(taskId, pendingData = null) {
+    state.taskToComplete = taskId;
+    state.pendingTaskData = pendingData;
+    dom.completedByInput.value = '';
+    dom.modalComplete.classList.add('active');
+    dom.completedByInput.focus();
+}
+
+/**
+ * Cancela a conclusão e reverte o status anterior
+ */
+async function cancelComplete() {
+    if (state.taskToComplete && state.previousStatus) {
+        // Reverte para o status anterior
+        try {
+            const { error } = await supabaseClient
+                .from('tarefas')
+                .update({ 
+                    status: state.previousStatus
+                })
+                .eq('id', state.taskToComplete);
+
+            if (error) throw error;
+            await fetchTasks();
+        } catch (err) {
+            showError('Erro ao reverter status', err);
+        }
+    }
+
+    // Fecha modal e limpa estado
+    dom.modalComplete.classList.remove('active');
+    state.taskToComplete = null;
+    state.previousStatus = null;
+    state.pendingTaskData = null;
+}
+
+/**
+ * Confirma a conclusão da tarefa com o nome
+ */
+async function confirmComplete() {
+    const completedBy = dom.completedByInput.value.trim();
+    
+    if (!completedBy) {
+        alert('Por favor, digite quem completou a tarefa.');
+        dom.completedByInput.focus();
+        return;
+    }
+
+    try {
+        if (state.taskToComplete) {
+            // Atualizando tarefa existente
+            const { error } = await supabaseClient
+                .from('tarefas')
+                .update({ 
+                    status: 'pronto',
+                    completed: true,
+                    completed_by: completedBy,
+                    completed_at: new Date().toISOString()
+                })
+                .eq('id', state.taskToComplete);
+
+            if (error) throw error;
+        } else if (state.pendingTaskData) {
+            // Criando nova tarefa já concluída
+            const taskData = {
+                ...state.pendingTaskData,
+                completed: true,
+                completed_by: completedBy,
+                completed_at: new Date().toISOString()
+            };
+
+            const { error } = await supabaseClient
+                .from('tarefas')
+                .insert([taskData]);
+
+            if (error) throw error;
+        }
+
+        dom.modalComplete.classList.remove('active');
+        state.taskToComplete = null;
+        state.previousStatus = null;
+        state.pendingTaskData = null;
+        await fetchTasks();
+    } catch (err) {
+        showError('Erro ao confirmar conclusão', err);
+    }
+}
+
 // --- RENDERIZAÇÃO E UI ---
 
 /**
  * Renderiza a lista de tarefas baseada no estado atual
+ * Ordena por data (menor para maior)
  */
 function render() {
     // Filtragem
-    const filtered = state.tasks.filter(t => {
+    let filtered = state.tasks.filter(t => {
         const matchesFilter = state.filter === 'Todos' || t.category === state.filter;
         const matchesSearch = t.description.toLowerCase().includes(state.search.toLowerCase());
         return matchesFilter && matchesSearch;
+    });
+
+    // Ordenação por data (menor para maior)
+    filtered = filtered.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date) : new Date('9999-12-31');
+        const dateB = b.date ? new Date(b.date) : new Date('9999-12-31');
+        return dateA - dateB;
     });
 
     const pending = filtered.filter(t => !t.completed);
@@ -177,19 +311,48 @@ function render() {
 function createCardHTML(task) {
     const dateFormatted = task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'Sem data';
     const isTCC = task.category === 'TCC';
+    
+    // Status labels
+    const statusLabels = {
+        'ninguem-fazendo': 'Ninguém Fazendo',
+        'desenvolvendo': 'Desenvolvendo',
+        'quase-pronto': 'Quase Pronto',
+        'pronto': 'Pronto'
+    };
+
+    const statusColors = {
+        'ninguem-fazendo': '#94a3b8',
+        'desenvolvendo': '#3b82f6',
+        'quase-pronto': '#f59e0b',
+        'pronto': '#10b981'
+    };
+
+    const currentStatus = task.status || 'ninguem-fazendo';
 
     return `
         <div class="task-card prio-${task.priority} ${task.completed ? 'completed' : ''} animate__animated animate__fadeIn" data-id="${task.id}">
             <div class="task-main">
-                <div class="check-btn" onclick="toggleComplete('${task.id}', ${task.completed})">
-                    <i class="fas fa-check"></i>
-                </div>
                 <div class="task-content">
                     <span class="task-title">${task.description}</span>
                     <div class="task-meta">
                         <div class="meta-item"><i class="far fa-calendar"></i> ${dateFormatted}</div>
                         <div class="tag tag-${task.category.toLowerCase()}">${task.category}</div>
+                        ${!task.completed ? `
+                            <div class="status-dropdown">
+                                <select onchange="changeStatus('${task.id}', this.value)" class="status-select" style="background-color: ${statusColors[currentStatus]}">
+                                    <option value="ninguem-fazendo" ${currentStatus === 'ninguem-fazendo' ? 'selected' : ''}>Ninguém Fazendo</option>
+                                    <option value="desenvolvendo" ${currentStatus === 'desenvolvendo' ? 'selected' : ''}>Desenvolvendo</option>
+                                    <option value="quase-pronto" ${currentStatus === 'quase-pronto' ? 'selected' : ''}>Quase Pronto</option>
+                                    <option value="pronto" ${currentStatus === 'pronto' ? 'selected' : ''}>Pronto</option>
+                                </select>
+                            </div>
+                        ` : ''}
                     </div>
+                    ${task.completed && task.completed_by ? `
+                        <div class="completed-info">
+                            <i class="fas fa-user-check"></i> Feito por <strong>${task.completed_by}</strong>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
             <div class="task-actions">
@@ -216,6 +379,7 @@ document.getElementById('btn-new-task').addEventListener('click', () => {
     dom.taskForm.reset();
     document.getElementById('task-id').value = '';
     document.getElementById('modal-title').textContent = 'Criar Nova Tarefa';
+    document.getElementById('f-status').value = 'ninguem-fazendo';
     dom.tccFields.classList.add('hidden');
     dom.modalForm.classList.add('active');
 });
@@ -225,10 +389,39 @@ document.querySelectorAll('.btn-close').forEach(btn => {
     btn.addEventListener('click', closeModals);
 });
 
+document.querySelectorAll('.btn-close-complete').forEach(btn => {
+    btn.addEventListener('click', cancelComplete);
+});
+
 function closeModals() {
     dom.modalForm.classList.remove('active');
     dom.modalDetails.classList.remove('active');
+    dom.modalComplete.classList.remove('active');
 }
+
+// Confirmar Conclusão
+dom.btnConfirmComplete.addEventListener('click', confirmComplete);
+
+// Cancelar ao clicar no overlay
+dom.modalComplete.addEventListener('click', (e) => {
+    if (e.target === dom.modalComplete) {
+        cancelComplete();
+    }
+});
+
+// ESC para cancelar
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dom.modalComplete.classList.contains('active')) {
+        cancelComplete();
+    }
+});
+
+// Enter para confirmar conclusão
+dom.completedByInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        confirmComplete();
+    }
+});
 
 // Lógica de Categoria TCC
 document.getElementById('f-category').addEventListener('change', (e) => {
@@ -255,6 +448,7 @@ window.openEditModal = (id) => {
     document.getElementById('f-priority').value = task.priority;
     document.getElementById('f-category').value = task.category;
     document.getElementById('f-details').value = task.details || '';
+    document.getElementById('f-status').value = task.status || 'ninguem-fazendo';
 
     document.getElementById('modal-title').textContent = 'Editar Tarefa';
     if (task.category === 'TCC') dom.tccFields.classList.remove('hidden');
@@ -267,6 +461,13 @@ window.showTccDetails = (id) => {
     const task = state.tasks.find(t => t.id === id);
     const content = document.getElementById('details-content');
     
+    const statusLabels = {
+        'ninguem-fazendo': 'Ninguém Fazendo',
+        'desenvolvendo': 'Desenvolvendo',
+        'quase-pronto': 'Quase Pronto',
+        'pronto': 'Pronto'
+    };
+    
     content.innerHTML = `
         <div class="input-group">
             <label>Descrição</label>
@@ -275,7 +476,7 @@ window.showTccDetails = (id) => {
         <div class="input-row">
             <div class="input-group">
                 <label>Data</label>
-                <p>${task.date || 'Não definida'}</p>
+                <p>${task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'Não definida'}</p>
             </div>
             <div class="input-group">
                 <label>Prioridade</label>
@@ -283,12 +484,25 @@ window.showTccDetails = (id) => {
             </div>
         </div>
         <div class="input-group">
+            <label>Status</label>
+            <p style="font-weight: 700;">${statusLabels[task.status || 'ninguem-fazendo']}</p>
+        </div>
+        ${task.completed_by ? `
+            <div class="input-group">
+                <label>Concluído por</label>
+                <p style="font-weight: 700; color: var(--accent);">${task.completed_by}</p>
+            </div>
+        ` : ''}
+        <div class="input-group">
             <label>Etapas e Observações</label>
             <div style="background: var(--bg-main); padding: 15px; border-radius: 10px; white-space: pre-wrap; line-height: 1.6;">${task.details}</div>
         </div>
     `;
     dom.modalDetails.classList.add('active');
 };
+
+// Função global para mudar status
+window.changeStatus = changeStatus;
 
 // Busca em Tempo Real
 dom.searchInput.addEventListener('input', (e) => {

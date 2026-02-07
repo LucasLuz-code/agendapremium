@@ -143,14 +143,25 @@
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Categoria</label>
-                    <select id="f-category">
-                        <option value="Tarefas">Tarefas</option>
-                        <option value="Provas">Provas</option>
-                        <option value="Trabalhos">Trabalhos</option>
-                        <option value="TCC">TCC</option>
-                    </select>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Categoria</label>
+                        <select id="f-category">
+                            <option value="Tarefas">Tarefas</option>
+                            <option value="Provas">Provas</option>
+                            <option value="Trabalhos">Trabalhos</option>
+                            <option value="TCC">TCC</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="f-status">
+                            <option value="ninguem-fazendo">Ninguém Fazendo</option>
+                            <option value="desenvolvendo">Desenvolvendo</option>
+                            <option value="quase-pronto">Quase Pronto</option>
+                            <option value="pronto">Pronto</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="tcc-fields" class="input-group hidden">
@@ -163,6 +174,32 @@
                     <button type="submit" class="btn-primary">Salvar Tarefa</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Conclusão -->
+    <div id="modal-complete" class="modal-overlay">
+        <div class="modal-card animate__animated animate__zoomIn">
+            <div class="modal-header">
+                <h2>Tarefa Concluída! 🎉</h2>
+                <button class="btn-close-complete"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Quem completou essa tarefa?</label>
+                    <input type="text" id="completed-by" placeholder="Digite seu nome..." required>
+                </div>
+                <p class="completion-hint">
+                    <i class="fas fa-info-circle"></i> 
+                    Esse nome será exibido junto com a tarefa concluída.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary btn-close-complete">Cancelar</button>
+                <button type="button" id="btn-confirm-complete" class="btn-primary">
+                    <i class="fas fa-check"></i> Confirmar Conclusão
+                </button>
+            </div>
         </div>
     </div>
 
