@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Estudantil Pro | Gestão Inteligente</title>
+    
+    <!-- Estilos Externos -->
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css">
+
+    <!-- Bibliotecas Core -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body class="light-mode">
+    <!-- Overlay de Carregamento -->
+    <div id="loader" class="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Sidebar Lateral Premium -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-wrapper">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>Estudantil<span>Pro</span></h2>
+                    <p>Dashboard de Estudos</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <p class="nav-label">Categorias</p>
+                <ul class="nav-list">
+                    <li class="nav-item active" data-filter="Todos">
+                        <i class="fas fa-grid-2"></i> <span>Todos</span>
+                    </li>
+                    <li class="nav-item" data-filter="Provas">
+                        <i class="fas fa-pen-nib"></i> <span>Provas</span>
+                    </li>
+                    <li class="nav-item" data-filter="Tarefas">
+                        <i class="fas fa-list-check"></i> <span>Tarefas</span>
+                    </li>
+                    <li class="nav-item" data-filter="Trabalhos">
+                        <i class="fas fa-briefcase"></i> <span>Trabalhos</span>
+                    </li>
+                    <li class="nav-item" data-filter="TCC">
+                        <i class="fas fa-award"></i> <span>TCC</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-card">
+                <i class="fas fa-lightbulb"></i>
+                <p>Mantenha seu TCC em dia com o acompanhamento de etapas!</p>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="btn-theme">
+                    <div class="toggle-circle">
+                        <i class="fas fa-moon"></i>
+                    </div>
+                    <span>Modo Escuro</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área Principal -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Pesquisar tarefas ou descrições...">
+                </div>
+                <div class="header-actions">
+                    <div class="status-indicator">
+                        <span class="dot"></span> Online
+                    </div>
+                    <button id="btn-new-task" class="btn-primary">
+                        <i class="fas fa-plus"></i> Nova Tarefa
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-scroll">
+                <!-- Seção de Pendentes -->
+                <section class="task-group">
+                    <div class="group-header">
+                        <h3><i class="fas fa-clock"></i> Pendentes</h3>
+                        <span id="count-pending" class="count-badge">0</span>
+                    </div>
+                    <div id="list-pending" class="task-container">
+                        <!-- Cards injetados via JS -->
+                    </div>
+                </section>
+
+                <!-- Seção de Concluídos -->
+                <section class="task-group">
+                    <div class="group-header">
+                        <h3><i class="fas fa-circle-check"></i> Concluídos</h3>
+                        <span id="count-completed" class="count-badge success">0</span>
+                    </div>
+                    <div id="list-completed" class="task-container">
+                        <!-- Cards injetados via JS -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Formulário (Glassmorphism) -->
+    <div id="modal-form" class="modal-overlay">
+        <div class="modal-card animate__animated animate__zoomIn">
+            <div class="modal-header">
+                <h2 id="modal-title">Criar Nova Tarefa</h2>
+                <button class="btn-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="task-form">
+                <input type="hidden" id="task-id">
+                
+                <div class="input-group">
+                    <label>Descrição da Tarefa *</label>
+                    <input type="text" id="f-description" placeholder="O que precisa ser feito?" required>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Data de Entrega</label>
+                        <input type="date" id="f-date">
+                    </div>
+                    <div class="input-group">
+                        <label>Prioridade</label>
+                        <select id="f-priority">
+                            <option value="baixa">Baixa</option>
+                            <option value="média">Média</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="f-category">
+                        <option value="Tarefas">Tarefas</option>
+                        <option value="Provas">Provas</option>
+                        <option value="Trabalhos">Trabalhos</option>
+                        <option value="TCC">TCC</option>
+                    </select>
+                </div>
+
+                <div id="tcc-fields" class="input-group hidden">
+                    <label>Detalhes / Etapas / Observações *</label>
+                    <textarea id="f-details" rows="4" placeholder="Liste as etapas ou observações importantes do seu TCC..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary btn-close">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Tarefa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes TCC -->
+    <div id="modal-details" class="modal-overlay">
+        <div class="modal-card details-card animate__animated animate__fadeInUp">
+            <div class="modal-header">
+                <h2>Detalhes do TCC</h2>
+                <button class="btn-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="details-content" class="details-body">
+                <!-- Injetado via JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary btn-close">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
