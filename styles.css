@@ -1,6 +1,7 @@
 /* 
     AGENDA ESTUDANTIL PRO - PREMIUM STYLESHEET
     Design System: Modern, Clean, Interactive
+    Versão Mobile-Optimized
 */
 
 :root {
@@ -612,18 +613,379 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Responsividade */
+/* ==================== RESPONSIVIDADE MOBILE ==================== */
+
 @media (max-width: 1024px) {
-    .sidebar { width: 80px; padding: 2rem 1rem; }
-    .brand-text, .nav-item span, .nav-label, .sidebar-card, .btn-theme span { display: none; }
-    .main-content { padding: 2rem; }
-    .header-search { width: 250px; }
+    .sidebar { 
+        width: 80px; 
+        padding: 2rem 1rem; 
+    }
+    
+    .brand-text, 
+    .nav-item span, 
+    .nav-label, 
+    .sidebar-card, 
+    .btn-theme span { 
+        display: none; 
+    }
+    
+    .sidebar-brand {
+        justify-content: center;
+    }
+    
+    .main-content { 
+        padding: 2rem; 
+    }
+    
+    .header-search { 
+        width: 250px; 
+    }
 }
 
 @media (max-width: 768px) {
-    .dashboard { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 1rem; }
-    .nav-list { flex-direction: row; overflow-x: auto; }
-    .main-content { height: 100vh; }
-    .header-search { display: none; }
+    body {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .dashboard { 
+        flex-direction: column; 
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* Sidebar Mobile Sticky */
+    .sidebar { 
+        width: 100%; 
+        height: auto; 
+        border-right: none; 
+        border-bottom: 1px solid var(--border); 
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: var(--bg-sidebar);
+    }
+
+    .sidebar-brand {
+        margin-bottom: 1rem;
+        justify-content: center;
+    }
+
+    .brand-text {
+        display: block;
+        text-align: center;
+    }
+
+    .brand-text p {
+        display: none;
+    }
+
+    .nav-menu {
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-label {
+        display: none;
+    }
+
+    /* Menu Horizontal Scroll */
+    .nav-list { 
+        flex-direction: row; 
+        overflow-x: auto;
+        gap: 8px;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .nav-list::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .nav-list::-webkit-scrollbar-thumb {
+        background-color: var(--border);
+        border-radius: 10px;
+    }
+
+    .nav-item {
+        white-space: nowrap;
+        padding: 10px 16px;
+        min-width: fit-content;
+        flex-shrink: 0;
+    }
+
+    .nav-item span {
+        display: inline;
+    }
+
+    .sidebar-card {
+        display: none;
+    }
+
+    .sidebar-footer {
+        display: none;
+    }
+
+    /* Main Content Mobile */
+    .main-content { 
+        padding: 1.5rem 1rem;
+        overflow-y: auto;
+        height: auto;
+    }
+
+    /* Header Mobile */
+    .header {
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        align-items: stretch;
+    }
+
+    .header-search { 
+        width: 100%;
+        order: 2;
+    }
+
+    .header-search input {
+        padding: 12px 12px 12px 44px;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        order: 1;
+    }
+
+    .btn-primary {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary i {
+        font-size: 0.9rem;
+    }
+
+    /* Content Scroll Mobile */
+    .content-scroll {
+        padding-right: 0;
+        overflow-y: visible;
+    }
+
+    .task-group {
+        margin-bottom: 2rem;
+    }
+
+    .group-header {
+        margin-bottom: 1rem;
+    }
+
+    .group-header h3 {
+        font-size: 1rem;
+    }
+
+    /* Task Card Mobile */
+    .task-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 1rem;
+    }
+
+    .task-card::before {
+        width: 100%;
+        height: 4px;
+        top: 0;
+        left: 0;
+    }
+
+    .task-main {
+        width: 100%;
+    }
+
+    .task-content {
+        flex: 1;
+        width: 100%;
+    }
+
+    .task-title {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    .task-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .task-actions {
+        width: 100%;
+        justify-content: flex-end;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        gap: 6px;
+    }
+
+    .task-card:hover {
+        transform: none;
+    }
+
+    .btn-icon {
+        width: 34px;
+        height: 34px;
+    }
+
+    /* Modal Mobile */
+    .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .modal-card {
+        max-width: 100%;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding: 1.5rem;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: slideUpMobile 0.3s ease-out;
+    }
+
+    @keyframes slideUpMobile {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    .modal-card.details-card {
+        max-height: 85vh;
+    }
+
+    .modal-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .input-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .input-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+
+    .modal-footer button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-secondary,
+    .btn-primary {
+        padding: 14px 24px;
+    }
+
+    /* Status Indicator Mobile */
+    .status-indicator {
+        font-size: 0.75rem;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+    }
+}
+
+/* Telas muito pequenas */
+@media (max-width: 380px) {
+    .main-content {
+        padding: 1rem 0.75rem;
+    }
+
+    .sidebar {
+        padding: 0.75rem;
+    }
+
+    .sidebar-brand {
+        gap: 8px;
+    }
+
+    .logo-wrapper {
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
+
+    .brand-text h2 {
+        font-size: 1.1rem;
+    }
+
+    .nav-item {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    .task-card {
+        padding: 0.875rem;
+    }
+
+    .task-title {
+        font-size: 0.9rem;
+    }
+
+    .task-meta {
+        font-size: 0.7rem;
+    }
+
+    .tag {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+
+    .modal-card {
+        padding: 1.25rem;
+    }
+
+    .modal-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .input-group label {
+        font-size: 0.8rem;
+    }
+
+    .input-group input,
+    .input-group select,
+    .input-group textarea {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Landscape Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        position: relative;
+    }
+
+    .modal-card {
+        max-height: 95vh;
+    }
 }
