@@ -1,7 +1,7 @@
 /**
  * AGENDA ESTUDANTIL PRO - CORE SCRIPT
  * Lógica de gerenciamento de estado, integração Supabase e UI dinâmico.
- * ATUALIZADO: Sistema de Status, Modal de Conclusão e Ordenação por Data
+ * ATUALIZADO: Sistema de Status, Modal de Conclusão com Descrição e Ordenação por Data
  */
 
 // --- CONFIGURAÇÃO SUPABASE ---
@@ -35,6 +35,7 @@ const dom = {
     loader: document.getElementById('loader'),
     navItems: document.querySelectorAll('.nav-item'),
     completedByInput: document.getElementById('completed-by'),
+    completionDescriptionInput: document.getElementById('completion-description'),
     btnConfirmComplete: document.getElementById('btn-confirm-complete')
 };
 
@@ -155,7 +156,7 @@ async function changeStatus(id, newStatus) {
     const task = state.tasks.find(t => t.id === id);
     if (!task) return;
 
-    // Se mudou para "pronto", abre modal para pedir nome
+    // Se mudou para "pronto", abre modal para pedir nome e descrição
     if (newStatus === 'pronto') {
         // Guarda o status anterior para poder reverter
         state.previousStatus = task.status || 'ninguem-fazendo';
@@ -170,7 +171,8 @@ async function changeStatus(id, newStatus) {
             .update({ 
                 status: newStatus,
                 completed: false,
-                completed_by: null
+                completed_by: null,
+                completion_description: null
             })
             .eq('id', id);
 
@@ -188,6 +190,7 @@ function openCompleteModal(taskId, pendingData = null) {
     state.taskToComplete = taskId;
     state.pendingTaskData = pendingData;
     dom.completedByInput.value = '';
+    dom.completionDescriptionInput.value = '';
     dom.modalComplete.classList.add('active');
     dom.completedByInput.focus();
 }
@@ -221,14 +224,21 @@ async function cancelComplete() {
 }
 
 /**
- * Confirma a conclusão da tarefa com o nome
+ * Confirma a conclusão da tarefa com o nome e descrição
  */
 async function confirmComplete() {
     const completedBy = dom.completedByInput.value.trim();
+    const completionDescription = dom.completionDescriptionInput.value.trim();
     
     if (!completedBy) {
         alert('Por favor, digite quem completou a tarefa.');
         dom.completedByInput.focus();
+        return;
+    }
+
+    if (!completionDescription) {
+        alert('Por favor, descreva como a tarefa foi realizada.');
+        dom.completionDescriptionInput.focus();
         return;
     }
 
@@ -241,6 +251,7 @@ async function confirmComplete() {
                     status: 'pronto',
                     completed: true,
                     completed_by: completedBy,
+                    completion_description: completionDescription,
                     completed_at: new Date().toISOString()
                 })
                 .eq('id', state.taskToComplete);
@@ -252,6 +263,7 @@ async function confirmComplete() {
                 ...state.pendingTaskData,
                 completed: true,
                 completed_by: completedBy,
+                completion_description: completionDescription,
                 completed_at: new Date().toISOString()
             };
 
@@ -311,6 +323,7 @@ function render() {
 function createCardHTML(task) {
     const dateFormatted = task.date ? new Date(task.date).toLocaleDateString('pt-BR') : 'Sem data';
     const isTCC = task.category === 'TCC';
+    const hasCompletionInfo = task.completed && (task.completion_description || task.details);
     
     // Status labels
     const statusLabels = {
@@ -351,13 +364,19 @@ function createCardHTML(task) {
                     ${task.completed && task.completed_by ? `
                         <div class="completed-info">
                             <i class="fas fa-user-check"></i> Feito por <strong>${task.completed_by}</strong>
+                            ${task.completion_description ? `
+                                <div class="completion-preview">
+                                    <i class="fas fa-file-lines"></i> 
+                                    ${task.completion_description.substring(0, 80)}${task.completion_description.length > 80 ? '...' : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     ` : ''}
                 </div>
             </div>
             <div class="task-actions">
-                ${isTCC && task.details ? `
-                    <button class="btn-icon" onclick="showTccDetails('${task.id}')" title="Ver Detalhes">
+                ${hasCompletionInfo ? `
+                    <button class="btn-icon" onclick="showTaskDetails('${task.id}')" title="Ver Detalhes">
                         <i class="fas fa-eye"></i>
                     </button>
                 ` : ''}
@@ -416,10 +435,11 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Enter para confirmar conclusão
+// Enter no campo de nome para ir para descrição
 dom.completedByInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        confirmComplete();
+        e.preventDefault();
+        dom.completionDescriptionInput.focus();
     }
 });
 
@@ -456,8 +476,8 @@ window.openEditModal = (id) => {
     dom.modalForm.classList.add('active');
 };
 
-// Detalhes TCC
-window.showTccDetails = (id) => {
+// Detalhes da Tarefa (TCC ou Tarefas Concluídas)
+window.showTaskDetails = (id) => {
     const task = state.tasks.find(t => t.id === id);
     const content = document.getElementById('details-content');
     
@@ -483,9 +503,15 @@ window.showTccDetails = (id) => {
                 <p style="color: var(--prio-${task.priority}); font-weight: 800; text-transform: uppercase;">${task.priority}</p>
             </div>
         </div>
-        <div class="input-group">
-            <label>Status</label>
-            <p style="font-weight: 700;">${statusLabels[task.status || 'ninguem-fazendo']}</p>
+        <div class="input-row">
+            <div class="input-group">
+                <label>Categoria</label>
+                <p style="font-weight: 700;">${task.category}</p>
+            </div>
+            <div class="input-group">
+                <label>Status</label>
+                <p style="font-weight: 700;">${statusLabels[task.status || 'ninguem-fazendo']}</p>
+            </div>
         </div>
         ${task.completed_by ? `
             <div class="input-group">
@@ -493,10 +519,24 @@ window.showTccDetails = (id) => {
                 <p style="font-weight: 700; color: var(--accent);">${task.completed_by}</p>
             </div>
         ` : ''}
-        <div class="input-group">
-            <label>Etapas e Observações</label>
-            <div style="background: var(--bg-main); padding: 15px; border-radius: 10px; white-space: pre-wrap; line-height: 1.6;">${task.details}</div>
-        </div>
+        ${task.completed_at ? `
+            <div class="input-group">
+                <label>Data de Conclusão</label>
+                <p>${new Date(task.completed_at).toLocaleString('pt-BR')}</p>
+            </div>
+        ` : ''}
+        ${task.completion_description ? `
+            <div class="input-group">
+                <label><i class="fas fa-clipboard-check"></i> Como foi realizada</label>
+                <div class="completion-full-description">${task.completion_description}</div>
+            </div>
+        ` : ''}
+        ${task.details && task.category === 'TCC' ? `
+            <div class="input-group">
+                <label>Etapas e Observações do TCC</label>
+                <div style="background: var(--bg-main); padding: 15px; border-radius: 10px; white-space: pre-wrap; line-height: 1.6;">${task.details}</div>
+            </div>
+        ` : ''}
     `;
     dom.modalDetails.classList.add('active');
 };

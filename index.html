@@ -186,12 +186,18 @@
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label>Quem completou essa tarefa?</label>
+                    <label>Quem completou essa tarefa? *</label>
                     <input type="text" id="completed-by" placeholder="Digite seu nome..." required>
                 </div>
+                
+                <div class="input-group">
+                    <label>Como você realizou essa tarefa? *</label>
+                    <textarea id="completion-description" rows="5" placeholder="Descreva como você fez, quais passos seguiu, ferramentas utilizadas, dificuldades encontradas..." required></textarea>
+                </div>
+                
                 <p class="completion-hint">
                     <i class="fas fa-info-circle"></i> 
-                    Esse nome será exibido junto com a tarefa concluída.
+                    Essas informações ajudarão outros membros da equipe a entenderem como a tarefa foi realizada.
                 </p>
             </div>
             <div class="modal-footer">
@@ -207,7 +213,7 @@
     <div id="modal-details" class="modal-overlay">
         <div class="modal-card details-card animate__animated animate__fadeInUp">
             <div class="modal-header">
-                <h2>Detalhes do TCC</h2>
+                <h2>Detalhes da Tarefa</h2>
                 <button class="btn-close"><i class="fas fa-times"></i></button>
             </div>
             <div id="details-content" class="details-body">
